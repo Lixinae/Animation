@@ -128,82 +128,31 @@ def Modeleur():
     points = []
     liaisons = []
     ray = 0.15
-    haut = 3
-    pointStart = PointFixe(Point(1, haut), ray, "red")
-    pointEnd = PointFixe(Point(9, haut), ray, "red")
-
-    for j in range(0, 3):
-        ligne = [PointFixe(Point(1, j+1), ray, "red")]
-        for i in range(2, 9):
-            point = Particule(Point(i, j+1), 1, h, ray, "red")
+    maxpts = 19
+    nbligne = 9
+    once = True
+    for j in range(nbligne, 0, -1):
+        ligne = [PointFixe(Point(1, j), ray, "red")]
+        for i in range(2, maxpts):
+            point = Particule(Point(i, j), 1, h, ray, "red")
             ligne.append(point)
-        ligne.append(PointFixe(Point(9, j+1), ray, "red"))
+        if once:
+            ligne.append(PointFixe(Point(maxpts, j), ray, "red"))
+            # once = False
+        else:
+            ligne.append(Particule(Point(maxpts, j), 1, h, ray, "red"))
         points.append(ligne)
 
-    for j in range(0, 3):
+    for j in range(0, nbligne):
         ressort = Ressort(points[j][0], points[j][1], k)
         liaisons.append(ressort)
-        ressort = Ressort(points[j][len(points[0])-1], points[j][1], k)
-        liaisons.append(ressort)
-        for i in range(3, 8):
-            ressort = Ressort(points[j][i], points[j][i+1], k)
+        for i in range(1, maxpts - 1):
+            ressort = Ressort(points[j][i], points[j][i + 1], k)
             liaisons.append(ressort)
+            if j < nbligne - 1:
+                ressort = Ressort(points[j][i], points[j + 1][i], k)
+                liaisons.append(ressort)
 
-    # point1 = Particule(Point(2, haut), 1, h, ray, "red")
-    # point2 = Particule(Point(3, haut), 1, h, ray, "red")
-    # point3 = Particule(Point(4, haut), 1, h, ray, "red")
-    # point4 = Particule(Point(5, haut), 1, h, ray, "red")
-    # point5 = Particule(Point(6, haut), 1, h, ray, "red")
-    # point6 = Particule(Point(7, haut), 1, h, ray, "red")
-    # point7 = Particule(Point(8, haut), 1, h, ray, "red")
-
-    # haut = 2
-    # pointStart2 = PointFixe(Point(1, haut), ray, "red")
-    # pointEnd2 = PointFixe(Point(9, haut), ray, "red")
-    # point12 = Particule(Point(2, haut), 1, h, ray, "red")
-    # point22 = Particule(Point(3, haut), 1, h, ray, "red")
-    # point32 = Particule(Point(4, haut), 1, h, ray, "red")
-    # point42 = Particule(Point(5, haut), 1, h, ray, "red")
-    # point52 = Particule(Point(6, haut), 1, h, ray, "red")
-    # point62 = Particule(Point(7, haut), 1, h, ray, "red")
-    # point72 = Particule(Point(8, haut), 1, h, ray, "red")
-
-    # G = 0
-    # grav = Gravite(point1, Vecteur(0, -G))
-    # grav1 = Gravite(point2, Vecteur(0, -G))
-    # grav2 = Gravite(point3, Vecteur(0, -G))
-    # grav3 = Gravite(point4, Vecteur(0, -G))
-    # grav4 = Gravite(point5, Vecteur(0, -G))
-
-    # ressort = Ressort(pointStart, point1, k)
-    # ressort1 = Ressort(point1, point2, k)
-    # ressort2 = Ressort(point2, point3, k)
-    # ressort3 = Ressort(point3, point4, k)
-    # ressort4 = Ressort(point4, point5, k)
-    # ressort5 = Ressort(point5, pointEnd, k)
-    #
-    # points.append(pointStart)
-    # points.append(point1)
-    # points.append(point2)
-    # points.append(point3)
-    # points.append(point4)
-    # points.append(point5)
-    # points.append(pointEnd)
-    #
-    # # liaisons.append(grav)
-    # # liaisons.append(grav1)
-    # # liaisons.append(grav2)
-    # # liaisons.append(grav3)
-    # # liaisons.append(grav4)
-    #
-    # liaisons.append(ressort)
-    # liaisons.append(ressort1)
-    # liaisons.append(ressort2)
-    # liaisons.append(ressort3)
-    # liaisons.append(ressort4)
-    # liaisons.append(ressort5)
-
-    # return balle,balle2,grav,ressort
     return points, liaisons
 
 
@@ -212,10 +161,11 @@ def Modeleur():
 def anim():
     """fonction animatrice"""
     for p in points:
-        p.setup()
+        for pts in p:
+            pts.setup()
     for l in liaisons:
         l.setup()
-    points[1].pos.y += 0.01
+    points[0][1].pos.y += 0.1
 
 
 # balle.setup()
@@ -264,7 +214,7 @@ if __name__ == '__main__':
 
     # Démarrage du réceptionnaire d'evenements :
     win = MainWindow("Corde 1D", 900, 450, "lightgrey")
-    win.SetDrawZone(-0.1, -0.1, +10.1, +5.1)
+    win.SetDrawZone(-0.1, -0.1, 20.1, 10.1)
 
     points, liaisons = Modeleur()
 
