@@ -27,6 +27,9 @@ class PointFixe:
     def setup(self):
         pass
 
+    def setupIntersect(self, particule):
+        pass
+
     # -------------------------------- (A|B) (vecteur AB)
     def __or__(self, M):
         return Vecteur(self.pos, M.pos)
@@ -44,6 +47,19 @@ class Particule(PointFixe):
         PointFixe.__init__(self, pos, ray, col)
 
     def setup(self):
+        self.vit += self.pas / self.m * self.frc
+        self.pos += self.pas * self.vit
+        self.frc = Vecteur(0, 0)
+
+    def intersect(self, particule):
+        # Faire l'intersection de 2 disque
+        if self == particule:
+            return False
+        return distance(self.pos, particule.pos) < self.ray + particule.ray
+
+    def setupIntersect(self, particule):
+        if self.intersect(particule):
+            self.frc = -self.frc
         self.vit += self.pas / self.m * self.frc
         self.pos += self.pas * self.vit
         self.frc = Vecteur(0, 0)
@@ -82,7 +98,7 @@ class Liaison:
 
     def draw(self):
         if self.M1 and self.M2:
-            if self.col == None:
+            if self.col is None:
                 return
             line(self.M1.pos, self.M2.pos, self.col, 1)
 
@@ -110,7 +126,7 @@ class Ressort(Liaison):
         e = (1. - self.l0 / d)  # elongation
         # force de rappel
         self.frc = self.k * e * Vecteur(self.M1.pos, self.M2.pos)
-        Liaison.setup(self);
+        Liaison.setup(self)
 
 
 #############################      
@@ -127,9 +143,9 @@ def Modeleur():
     """ Modeleur """
     points = []
     liaisons = []
-    ray = 0.15
-    maxpts = 19
-    nbligne = 9
+    ray = 0.1
+    maxpts = width - 1
+    nbligne = height - 1
     once = True
     for j in range(nbligne, 0, -1):
         ligne = [PointFixe(Point(1, j), ray, "red")]
@@ -160,12 +176,18 @@ def Modeleur():
 # fonction animatrice
 def anim():
     """fonction animatrice"""
-    for p in points:
-        for pts in p:
-            pts.setup()
+    for pts in points:
+        for p in pts:
+            # todo Trouver un meilleur algo pour detecter la collision
+            # for others in points:
+            #     for particule in others:
+            # p.setupIntersect(particule)
+            p.setup()
+
     for l in liaisons:
         l.setup()
-    points[0][1].pos.y += 0.1
+    points[0][1].pos.y += 0.3
+    points[0][len(points[0]) - 2].pos.y -= 0.2
 
 
 # balle.setup()
@@ -214,7 +236,9 @@ if __name__ == '__main__':
 
     # Démarrage du réceptionnaire d'evenements :
     win = MainWindow("Corde 1D", 900, 450, "lightgrey")
-    win.SetDrawZone(-0.1, -0.1, 20.1, 10.1)
+    width = 30
+    height = 15
+    win.SetDrawZone(-0.1, -0.1, width + 0.1, height + 0.1)
 
     points, liaisons = Modeleur()
 
