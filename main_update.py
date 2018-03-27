@@ -39,15 +39,20 @@ class PointFixe:
 class Particule(PointFixe):
     """initialisation d'une particule : position, masse, pas, rayon, couleur"""
 
-    def __init__(self, pos, m, pas, ray, col):
+    def __init__(self, pos, masse, pas, ray, col):
         # paramètres physiques
-        self.m = m
+        self.masse = masse
         self.pas = pas
         # hérite du PointFixe
         PointFixe.__init__(self, pos, ray, col)
 
     def setup(self):
-        self.vit += self.pas / self.m * self.frc
+        self.vit += (self.pas / self.masse) * self.frc
+        self.pos += self.pas * self.vit
+        self.frc = Vecteur(0, 0)
+
+    def leapFrog(self,grav):
+        self.vit += self.pas * (-grav - (0.01 / self.masse) * self.vit)
         self.pos += self.pas * self.vit
         self.frc = Vecteur(0, 0)
 
@@ -56,14 +61,6 @@ class Particule(PointFixe):
         if self == particule:
             return False
         return distance(self.pos, particule.pos) < self.ray + particule.ray
-
-    def setupIntersect(self, particule):
-        if self.intersect(particule):
-            self.frc = -self.frc
-        self.vit += self.pas / self.m * self.frc
-        self.pos += self.pas * self.vit
-        self.frc = Vecteur(0, 0)
-
 
 # --------------------------------
 # moteur : LEAPFROG
@@ -109,6 +106,10 @@ class Gravite(Liaison):
         Liaison.__init__(self, M, None, None)
         self.frc = vecGrav
 
+    # todo -> modifier
+    # w=m/z
+    #  P0.y+w*(-g*w+V0.y)*(1.-e)+g*w*t)
+    #
     def setup(self):
         self.M1.frc += self.frc
 
@@ -126,13 +127,15 @@ class Ressort(Liaison):
         e = (1. - self.l0 / d)  # elongation
         # force de rappel
         self.frc = self.k * e * Vecteur(self.M1.pos, self.M2.pos)
+        # todo : rajouter amortissement , + self.z * (v2 -v1)
         Liaison.setup(self)
 
 
 #############################      
-m = 1
+masse = 1
 h = 0.01
-k = 100
+k = 1000
+g = 9.81
 
 
 # ____________________FONCTIONS       ____________________#
@@ -144,28 +147,33 @@ def Modeleur():
     points = []
     liaisons = []
     ray = 0.1
-    maxpts = width - 1
-    nbligne = height - 1
+    maxpts = int(width * 1.5)
+    nbligne = height * 1.5
+    space = int(nbligne - height)
+
     once = True
-    for j in range(nbligne, 0, -1):
+    # for j in range(int(nbligne), space, -1):
+    for j in range(int(nbligne), space, -1):
         ligne = [PointFixe(Point(1, j), ray, "red")]
-        for i in range(2, maxpts):
-            point = Particule(Point(i, j), 1, h, ray, "red")
+        for i in range(2, maxpts,1):
+            point = Particule(Point(i, j), masse, h, ray, "red")
             ligne.append(point)
         if once:
             ligne.append(PointFixe(Point(maxpts, j), ray, "red"))
             # once = False
         else:
-            ligne.append(Particule(Point(maxpts, j), 1, h, ray, "red"))
+            ligne.append(Particule(Point(maxpts, j), masse, h, ray, "red"))
         points.append(ligne)
 
-    for j in range(0, nbligne):
+    for j in range(0, int(nbligne-space)):
         ressort = Ressort(points[j][0], points[j][1], k)
         liaisons.append(ressort)
-        for i in range(1, maxpts - 1):
+        for i in range(1, maxpts - 1,1):
             ressort = Ressort(points[j][i], points[j][i + 1], k)
             liaisons.append(ressort)
-            if j < nbligne - 1:
+            grav = Gravite(points[j][i], Vecteur(0, -g))
+            liaisons.append(grav)
+            if j < int(height) - 1:
                 ressort = Ressort(points[j][i], points[j + 1][i], k)
                 liaisons.append(ressort)
 
@@ -176,18 +184,27 @@ def Modeleur():
 # fonction animatrice
 def anim():
     """fonction animatrice"""
+    h = hscale.get()
+    #masse = mscale.get()
+    k = kscale.get()
+    g = gscale.get()
     for pts in points:
         for p in pts:
-            # todo Trouver un meilleur algo pour detecter la collision
-            # for others in points:
-            #     for particule in others:
-            # p.setupIntersect(particule)
+            p.pas = h
+            #p.masse = masse
             p.setup()
+            # if(type(p) is Particule):
+            #     p.leapFrog(Vecteur(0,g))
+            # else:
+            #     p.setup()
 
     for l in liaisons:
+        l.k = k
+        if type(l) is Gravite:
+            l.frc = Vecteur(0,-g)
         l.setup()
-    points[0][1].pos.y += 0.3
-    points[0][len(points[0]) - 2].pos.y -= 0.2
+    # points[0][1].pos.y += 0.1
+    # points[0][len(points[0]) - 2].pos.y -= 0.1
 
 
 # balle.setup()
@@ -222,10 +239,9 @@ def draw():
     # balle.draw()
     # balle2.draw()
     # ressort.draw()
-
-    for p in points:
-        for pts in p:
-            pts.draw()
+    for pts in points:
+        for p in pts:
+            p.draw()
     for l in liaisons:
         l.draw()
 
@@ -236,19 +252,23 @@ if __name__ == '__main__':
 
     # Démarrage du réceptionnaire d'evenements :
     win = MainWindow("Corde 1D", 900, 450, "lightgrey")
-    width = 30
-    height = 15
-    win.SetDrawZone(-0.1, -0.1, width + 0.1, height + 0.1)
+    width = 20
+    height = 10
+    win.SetDrawZone(-0.1, -0.1, width * 1.5 + 1, height * 1.5 + 1)
 
     points, liaisons = Modeleur()
 
     # scrollbars
     # dtscale=win.CreateScalev(label='dt',inf=0.01,sup=0.1,step=0.002)
     # dtscale.set(dt)
-    # zscale=win.CreateScalev(label='z',inf=0.01,sup=0.2,step=0.002)
-    # zscale.set(z)
-    # hscale=win.CreateScalev(label='h',inf=0.01,sup=0.1,step=0.001)
-    # hscale.set(h)
+    #mscale = win.CreateScalev(label='m', inf=0.1, sup=100, step=0.1)
+    #mscale.set(masse)
+    hscale = win.CreateScalev(label='h', inf=0.001, sup=0.1, step=0.0001)
+    hscale.set(h)
+    kscale = win.CreateScalev(label='k', inf=1, sup=2000, step=1)
+    kscale.set(k)
+    gscale = win.CreateScalev(label='g', inf=1, sup=20, step=0.1)
+    gscale.set(g)
 
     win.anim = anim
     win.draw = draw
