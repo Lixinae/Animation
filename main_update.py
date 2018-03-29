@@ -203,8 +203,8 @@ def anim():
         if type(l) is Gravite:
             l.frc = Vecteur(0,-g)
         l.setup()
-    # points[0][1].pos.y += 0.1
-    # points[0][len(points[0]) - 2].pos.y -= 0.1
+    points[0][1].pos.y += 0.4
+    points[0][len(points[0]) - 2].pos.y -= 0.4
 
 
 # balle.setup()
